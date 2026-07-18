@@ -435,3 +435,107 @@ function BankCard({ bank, holder, number }: { bank: string; holder: string; numb
     </div>
   );
 }
+
+function ReviewSection() {
+  const [ratings, setRatings] = useState<Record<string, number>>({});
+  const [text, setText] = useState("");
+  const [priority, setPriority] = useState<"low" | "med" | "high">("low");
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+  const cats = ["Place & Ambiance", "Food & Drinks", "Customer Service"];
+  const complete = cats.every((c) => ratings[c] > 0);
+
+  if (submitted) {
+    return (
+      <section id="review" className="mt-12 rounded-3xl border border-border bg-card p-6 text-center sm:p-10">
+        <h2 className="text-2xl font-bold">Thank you!</h2>
+        <p className="mt-2 text-sm text-muted-foreground">Your feedback has been recorded.</p>
+      </section>
+    );
+  }
+
+  return (
+    <section id="review" className="mt-12 rounded-3xl border border-border bg-card p-6 sm:p-10">
+      <h2 className="text-2xl font-bold">Share Your Experience</h2>
+      <p className="mt-1 text-sm text-muted-foreground">Your honest feedback helps us serve you better every visit.</p>
+      <div className="mt-6 grid gap-6 sm:grid-cols-3">
+        {cats.map((label) => (
+          <div key={label}>
+            <div className="text-sm font-medium">{label}</div>
+            <div className="mt-2 flex gap-1">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button key={n} onClick={() => setRatings((r) => ({ ...r, [label]: n }))} aria-label={`${n} star`}>
+                  <Star
+                    className={`h-7 w-7 transition ${
+                      (ratings[label] ?? 0) >= n
+                        ? "fill-[var(--brand-gold)] text-[var(--brand-gold)]"
+                        : "text-neutral-300"
+                    }`}
+                  />
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="mt-6">
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Tell us more (optional)"
+          maxLength={2000}
+          rows={4}
+          className="w-full rounded-2xl border border-border bg-background p-3 text-sm outline-none focus:ring-2 focus:ring-[var(--brand-gold)]"
+        />
+        <div className="mt-1 text-right text-xs text-muted-foreground">{text.length} / 2000</div>
+      </div>
+      <div className="mt-4">
+        <div className="text-sm font-medium">How important is this feedback?</div>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {[
+            { k: "low", label: "Just sharing" },
+            { k: "med", label: "Needs attention" },
+            { k: "high", label: "Urgent" },
+          ].map((p) => (
+            <button
+              key={p.k}
+              onClick={() => setPriority(p.k as typeof priority)}
+              className={`rounded-full border px-4 py-1.5 text-sm font-medium transition ${
+                priority === p.k
+                  ? "border-transparent bg-[var(--brand-gold)] text-neutral-900"
+                  : "border-border bg-card hover:bg-muted"
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="mt-6 grid gap-3 sm:grid-cols-2">
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Your name (optional)"
+          className="rounded-2xl border border-border bg-background p-3 text-sm outline-none focus:ring-2 focus:ring-[var(--brand-gold)]"
+        />
+        <input
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          placeholder="Phone (optional)"
+          className="rounded-2xl border border-border bg-background p-3 text-sm outline-none focus:ring-2 focus:ring-[var(--brand-gold)]"
+        />
+      </div>
+      <button
+        disabled={!complete}
+        onClick={() => setSubmitted(true)}
+        className="mt-4 rounded-full bg-[var(--brand-gold)] px-6 py-2.5 text-sm font-bold text-neutral-900 hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        Submit Review
+      </button>
+      {!complete && (
+        <p className="mt-2 text-xs text-muted-foreground">Please rate all three categories to submit</p>
+      )}
+    </section>
+  );
+}
