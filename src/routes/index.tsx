@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Info, LayoutGrid, List, MapPin, MessageSquare, Search, Star, Wallet } from "lucide-react";
+import { ChevronLeft, ChevronRight, ExternalLink, Info, LayoutGrid, List, MapPin, MessageSquare, Moon, Phone, Search, Star, Sun, Wallet, X } from "lucide-react";
 import { categories, popular, LOGO_ANIMAL, LOGO_TEXT, type MenuItem } from "@/lib/menu-data";
 
 export const Route = createFileRoute("/")({
