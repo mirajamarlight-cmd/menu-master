@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Info, LayoutGrid, List, MapPin, MessageSquare, Search, Star, Wallet } from "lucide-react";
+import { ChevronLeft, ChevronRight, ExternalLink, Info, LayoutGrid, List, MapPin, MessageSquare, Moon, Phone, Search, Star, Sun, Wallet, X } from "lucide-react";
 import { categories, popular, LOGO_ANIMAL, LOGO_TEXT, type MenuItem } from "@/lib/menu-data";
 
 export const Route = createFileRoute("/")({
@@ -95,10 +95,13 @@ function HeroCarousel() {
   );
 }
 
-function ItemCard({ item, view }: { item: MenuItem; view: "grid" | "list" }) {
+function ItemCard({ item, view, onOpen }: { item: MenuItem; view: "grid" | "list"; onOpen: (i: MenuItem) => void }) {
   if (view === "list") {
     return (
-      <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-3 shadow-sm">
+      <div
+        onClick={() => onOpen(item)}
+        className="flex cursor-pointer items-center gap-4 rounded-2xl border border-border bg-card p-3 shadow-sm transition hover:shadow-md"
+      >
         <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-muted">
           <ItemImage item={item} />
         </div>
@@ -118,7 +121,10 @@ function ItemCard({ item, view }: { item: MenuItem; view: "grid" | "list" }) {
     );
   }
   return (
-    <div className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition hover:shadow-md">
+    <div
+      onClick={() => onOpen(item)}
+      className="group flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition hover:shadow-md"
+    >
       <div className="aspect-square w-full overflow-hidden bg-muted">
         <ItemImage item={item} className="h-full w-full object-cover transition group-hover:scale-105" />
       </div>
@@ -142,11 +148,63 @@ function ItemCard({ item, view }: { item: MenuItem; view: "grid" | "list" }) {
   );
 }
 
+function ItemModal({ item, onClose }: { item: MenuItem | null; onClose: () => void }) {
+  useEffect(() => {
+    if (!item) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = "";
+    };
+  }, [item, onClose]);
+  if (!item) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={onClose}>
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-lg overflow-hidden rounded-3xl bg-card shadow-2xl"
+      >
+        <div className="aspect-video w-full bg-muted">
+          <ItemImage item={item} className="h-full w-full object-cover" />
+        </div>
+        <button
+          onClick={onClose}
+          className="absolute right-3 top-3 rounded-full bg-black/50 p-2 text-white hover:bg-black/70"
+          aria-label="Close"
+        >
+          <X className="h-4 w-4" />
+        </button>
+        <div className="p-6">
+          <h3 className="text-2xl font-bold">{item.name}</h3>
+          {item.note && <p className="mt-2 text-sm text-muted-foreground">{item.note}</p>}
+          <div className="mt-4 inline-flex flex-col rounded-2xl bg-muted px-5 py-3">
+            <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Price</span>
+            <span className="text-xl font-bold">
+              {item.startingFrom && <span className="mr-1 text-xs font-normal text-muted-foreground">Starting from</span>}
+              {item.price}
+              <span className="ml-1 text-sm font-semibold text-[var(--brand-gold)]">ETB</span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 function MenuPage() {
   const [query, setQuery] = useState("");
   const [active, setActive] = useState<string>("all");
   const [view, setView] = useState<"grid" | "list">("grid");
+  const [openItem, setOpenItem] = useState<MenuItem | null>(null);
+  const [dark, setDark] = useState(false);
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", dark);
+  }, [dark]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -200,12 +258,27 @@ function MenuPage() {
             </a>
           </nav>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setDark((d) => !d)}
+              aria-label="Toggle dark mode"
+              className="rounded-full border border-border p-2 hover:bg-muted"
+            >
+              {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </button>
             <button className="hidden rounded-full border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted sm:inline-flex">
               EN
             </button>
             <button className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted">
               <MessageSquare className="h-4 w-4" /> Complaint
             </button>
+            <a
+              href="https://muskplc.com"
+              target="_blank"
+              rel="noreferrer"
+              className="hidden items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted lg:inline-flex"
+            >
+              Contact Developer <ExternalLink className="h-3.5 w-3.5" />
+            </a>
           </div>
         </div>
 
@@ -280,7 +353,7 @@ function MenuPage() {
                 }
               >
                 {c.items.map((item, i) => (
-                  <ItemCard key={c.slug + i} item={item} view={view} />
+                  <ItemCard key={c.slug + i} item={item} view={view} onOpen={setOpenItem} />
                 ))}
               </div>
             </section>
@@ -303,37 +376,23 @@ function MenuPage() {
         </section>
 
         {/* Review */}
-        <section id="review" className="mt-12 rounded-3xl border border-border bg-card p-6 sm:p-10">
-          <h2 className="text-2xl font-bold">Share Your Experience</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Your honest feedback helps us serve you better every visit.</p>
-          <div className="mt-6 grid gap-6 sm:grid-cols-3">
-            {["Place & Ambiance", "Food & Drinks", "Customer Service"].map((label) => (
-              <div key={label}>
-                <div className="text-sm font-medium">{label}</div>
-                <div className="mt-2 flex gap-1">
-                  {[1, 2, 3, 4, 5].map((n) => (
-                    <Star key={n} className="h-6 w-6 text-neutral-300" />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-          <textarea
-            placeholder="Tell us more (optional)"
-            maxLength={2000}
-            className="mt-6 w-full rounded-2xl border border-border bg-background p-3 text-sm outline-none focus:ring-2 focus:ring-[var(--brand-gold)]"
-            rows={4}
-          />
-          <button className="mt-4 rounded-full bg-[var(--brand-gold)] px-6 py-2.5 text-sm font-bold text-neutral-900 hover:brightness-95">
-            Submit Review
-          </button>
-        </section>
+        <ReviewSection />
 
         <footer id="contact" className="mt-16 pb-10 pt-8 text-center text-sm text-muted-foreground">
           <img src={LOGO_TEXT} alt="Musk Restaurant" className="mx-auto h-8" />
+          <div className="mt-4 flex items-center justify-center gap-4 text-sm">
+            <a href="tel:+251967777778" className="inline-flex items-center gap-1.5 hover:text-[var(--brand-gold)]">
+              <Phone className="h-4 w-4" /> +251 96 777 7778
+            </a>
+            <a href="https://maps.google.com" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:text-[var(--brand-gold)]">
+              <MapPin className="h-4 w-4" /> Addis Ababa
+            </a>
+          </div>
           <p className="mt-3">© {new Date().getFullYear()} Musk Restaurant</p>
         </footer>
       </main>
+
+      <ItemModal item={openItem} onClose={() => setOpenItem(null)} />
     </div>
   );
 }
@@ -374,5 +433,109 @@ function BankCard({ bank, holder, number }: { bank: string; holder: string; numb
         </button>
       </div>
     </div>
+  );
+}
+
+function ReviewSection() {
+  const [ratings, setRatings] = useState<Record<string, number>>({});
+  const [text, setText] = useState("");
+  const [priority, setPriority] = useState<"low" | "med" | "high">("low");
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+  const cats = ["Place & Ambiance", "Food & Drinks", "Customer Service"];
+  const complete = cats.every((c) => ratings[c] > 0);
+
+  if (submitted) {
+    return (
+      <section id="review" className="mt-12 rounded-3xl border border-border bg-card p-6 text-center sm:p-10">
+        <h2 className="text-2xl font-bold">Thank you!</h2>
+        <p className="mt-2 text-sm text-muted-foreground">Your feedback has been recorded.</p>
+      </section>
+    );
+  }
+
+  return (
+    <section id="review" className="mt-12 rounded-3xl border border-border bg-card p-6 sm:p-10">
+      <h2 className="text-2xl font-bold">Share Your Experience</h2>
+      <p className="mt-1 text-sm text-muted-foreground">Your honest feedback helps us serve you better every visit.</p>
+      <div className="mt-6 grid gap-6 sm:grid-cols-3">
+        {cats.map((label) => (
+          <div key={label}>
+            <div className="text-sm font-medium">{label}</div>
+            <div className="mt-2 flex gap-1">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button key={n} onClick={() => setRatings((r) => ({ ...r, [label]: n }))} aria-label={`${n} star`}>
+                  <Star
+                    className={`h-7 w-7 transition ${
+                      (ratings[label] ?? 0) >= n
+                        ? "fill-[var(--brand-gold)] text-[var(--brand-gold)]"
+                        : "text-neutral-300"
+                    }`}
+                  />
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="mt-6">
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Tell us more (optional)"
+          maxLength={2000}
+          rows={4}
+          className="w-full rounded-2xl border border-border bg-background p-3 text-sm outline-none focus:ring-2 focus:ring-[var(--brand-gold)]"
+        />
+        <div className="mt-1 text-right text-xs text-muted-foreground">{text.length} / 2000</div>
+      </div>
+      <div className="mt-4">
+        <div className="text-sm font-medium">How important is this feedback?</div>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {[
+            { k: "low", label: "Just sharing" },
+            { k: "med", label: "Needs attention" },
+            { k: "high", label: "Urgent" },
+          ].map((p) => (
+            <button
+              key={p.k}
+              onClick={() => setPriority(p.k as typeof priority)}
+              className={`rounded-full border px-4 py-1.5 text-sm font-medium transition ${
+                priority === p.k
+                  ? "border-transparent bg-[var(--brand-gold)] text-neutral-900"
+                  : "border-border bg-card hover:bg-muted"
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="mt-6 grid gap-3 sm:grid-cols-2">
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Your name (optional)"
+          className="rounded-2xl border border-border bg-background p-3 text-sm outline-none focus:ring-2 focus:ring-[var(--brand-gold)]"
+        />
+        <input
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          placeholder="Phone (optional)"
+          className="rounded-2xl border border-border bg-background p-3 text-sm outline-none focus:ring-2 focus:ring-[var(--brand-gold)]"
+        />
+      </div>
+      <button
+        disabled={!complete}
+        onClick={() => setSubmitted(true)}
+        className="mt-4 rounded-full bg-[var(--brand-gold)] px-6 py-2.5 text-sm font-bold text-neutral-900 hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        Submit Review
+      </button>
+      {!complete && (
+        <p className="mt-2 text-xs text-muted-foreground">Please rate all three categories to submit</p>
+      )}
+    </section>
   );
 }
