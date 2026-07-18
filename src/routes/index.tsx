@@ -376,37 +376,23 @@ function MenuPage() {
         </section>
 
         {/* Review */}
-        <section id="review" className="mt-12 rounded-3xl border border-border bg-card p-6 sm:p-10">
-          <h2 className="text-2xl font-bold">Share Your Experience</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Your honest feedback helps us serve you better every visit.</p>
-          <div className="mt-6 grid gap-6 sm:grid-cols-3">
-            {["Place & Ambiance", "Food & Drinks", "Customer Service"].map((label) => (
-              <div key={label}>
-                <div className="text-sm font-medium">{label}</div>
-                <div className="mt-2 flex gap-1">
-                  {[1, 2, 3, 4, 5].map((n) => (
-                    <Star key={n} className="h-6 w-6 text-neutral-300" />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-          <textarea
-            placeholder="Tell us more (optional)"
-            maxLength={2000}
-            className="mt-6 w-full rounded-2xl border border-border bg-background p-3 text-sm outline-none focus:ring-2 focus:ring-[var(--brand-gold)]"
-            rows={4}
-          />
-          <button className="mt-4 rounded-full bg-[var(--brand-gold)] px-6 py-2.5 text-sm font-bold text-neutral-900 hover:brightness-95">
-            Submit Review
-          </button>
-        </section>
+        <ReviewSection />
 
         <footer id="contact" className="mt-16 pb-10 pt-8 text-center text-sm text-muted-foreground">
           <img src={LOGO_TEXT} alt="Musk Restaurant" className="mx-auto h-8" />
+          <div className="mt-4 flex items-center justify-center gap-4 text-sm">
+            <a href="tel:+251967777778" className="inline-flex items-center gap-1.5 hover:text-[var(--brand-gold)]">
+              <Phone className="h-4 w-4" /> +251 96 777 7778
+            </a>
+            <a href="https://maps.google.com" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:text-[var(--brand-gold)]">
+              <MapPin className="h-4 w-4" /> Addis Ababa
+            </a>
+          </div>
           <p className="mt-3">© {new Date().getFullYear()} Musk Restaurant</p>
         </footer>
       </main>
+
+      <ItemModal item={openItem} onClose={() => setOpenItem(null)} />
     </div>
   );
 }
