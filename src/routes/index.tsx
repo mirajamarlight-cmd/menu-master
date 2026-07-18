@@ -198,7 +198,13 @@ function MenuPage() {
   const [query, setQuery] = useState("");
   const [active, setActive] = useState<string>("all");
   const [view, setView] = useState<"grid" | "list">("grid");
+  const [openItem, setOpenItem] = useState<MenuItem | null>(null);
+  const [dark, setDark] = useState(false);
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", dark);
+  }, [dark]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
