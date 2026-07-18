@@ -95,10 +95,13 @@ function HeroCarousel() {
   );
 }
 
-function ItemCard({ item, view }: { item: MenuItem; view: "grid" | "list" }) {
+function ItemCard({ item, view, onOpen }: { item: MenuItem; view: "grid" | "list"; onOpen: (i: MenuItem) => void }) {
   if (view === "list") {
     return (
-      <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-3 shadow-sm">
+      <div
+        onClick={() => onOpen(item)}
+        className="flex cursor-pointer items-center gap-4 rounded-2xl border border-border bg-card p-3 shadow-sm transition hover:shadow-md"
+      >
         <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-muted">
           <ItemImage item={item} />
         </div>
@@ -118,7 +121,10 @@ function ItemCard({ item, view }: { item: MenuItem; view: "grid" | "list" }) {
     );
   }
   return (
-    <div className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition hover:shadow-md">
+    <div
+      onClick={() => onOpen(item)}
+      className="group flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition hover:shadow-md"
+    >
       <div className="aspect-square w-full overflow-hidden bg-muted">
         <ItemImage item={item} className="h-full w-full object-cover transition group-hover:scale-105" />
       </div>
@@ -141,6 +147,52 @@ function ItemCard({ item, view }: { item: MenuItem; view: "grid" | "list" }) {
     </div>
   );
 }
+
+function ItemModal({ item, onClose }: { item: MenuItem | null; onClose: () => void }) {
+  useEffect(() => {
+    if (!item) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = "";
+    };
+  }, [item, onClose]);
+  if (!item) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={onClose}>
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-lg overflow-hidden rounded-3xl bg-card shadow-2xl"
+      >
+        <div className="aspect-video w-full bg-muted">
+          <ItemImage item={item} className="h-full w-full object-cover" />
+        </div>
+        <button
+          onClick={onClose}
+          className="absolute right-3 top-3 rounded-full bg-black/50 p-2 text-white hover:bg-black/70"
+          aria-label="Close"
+        >
+          <X className="h-4 w-4" />
+        </button>
+        <div className="p-6">
+          <h3 className="text-2xl font-bold">{item.name}</h3>
+          {item.note && <p className="mt-2 text-sm text-muted-foreground">{item.note}</p>}
+          <div className="mt-4 inline-flex flex-col rounded-2xl bg-muted px-5 py-3">
+            <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Price</span>
+            <span className="text-xl font-bold">
+              {item.startingFrom && <span className="mr-1 text-xs font-normal text-muted-foreground">Starting from</span>}
+              {item.price}
+              <span className="ml-1 text-sm font-semibold text-[var(--brand-gold)]">ETB</span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
 function MenuPage() {
   const [query, setQuery] = useState("");
