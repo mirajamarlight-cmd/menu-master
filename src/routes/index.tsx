@@ -338,7 +338,7 @@ function MenuPage() {
                 }
               >
                 {c.items.map((item, i) => (
-                  <ItemCard key={c.slug + i} item={item} view={view} />
+                  <ItemCard key={c.slug + i} item={item} view={view} onOpen={setOpenItem} />
                 ))}
               </div>
             </section>
