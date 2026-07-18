@@ -258,12 +258,27 @@ function MenuPage() {
             </a>
           </nav>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setDark((d) => !d)}
+              aria-label="Toggle dark mode"
+              className="rounded-full border border-border p-2 hover:bg-muted"
+            >
+              {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </button>
             <button className="hidden rounded-full border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted sm:inline-flex">
               EN
             </button>
             <button className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted">
               <MessageSquare className="h-4 w-4" /> Complaint
             </button>
+            <a
+              href="https://muskplc.com"
+              target="_blank"
+              rel="noreferrer"
+              className="hidden items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted lg:inline-flex"
+            >
+              Contact Developer <ExternalLink className="h-3.5 w-3.5" />
+            </a>
           </div>
         </div>
 
