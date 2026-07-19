@@ -77,14 +77,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { title: "RAAFAT — Cafe management platform" },
+      { name: "description", content: "RAAFAT: multi-tenant hospitality SaaS for cafes and restaurants — menus, orders, QR tables, staff and analytics." },
+      { name: "author", content: "RAAFAT-DIGITAL" },
+      { property: "og:title", content: "RAAFAT — Cafe management platform" },
+      { property: "og:description", content: "Multi-tenant hospitality SaaS for cafes and restaurants." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:site", content: "@Lovable" },
     ],
     links: [
       {
@@ -116,6 +115,21 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const router = useRouter();
+
+  useEffect(() => {
+    // Lazy import so this only runs client-side.
+    let sub: { unsubscribe: () => void } | undefined;
+    void import("@/integrations/supabase/client").then(({ supabase }) => {
+      const { data } = supabase.auth.onAuthStateChange((event) => {
+        if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
+        router.invalidate();
+        if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
+      });
+      sub = data.subscription;
+    });
+    return () => sub?.unsubscribe();
+  }, [router, queryClient]);
 
   return (
     <QueryClientProvider client={queryClient}>
