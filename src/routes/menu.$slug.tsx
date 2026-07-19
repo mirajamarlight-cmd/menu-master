@@ -2,16 +2,19 @@ import { createFileRoute, notFound, redirect } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/menu/$slug")({
-  head: ({ loaderData }) => ({
-    meta: loaderData
-      ? [
-          { title: `${loaderData.name} — Digital Menu` },
-          { name: "description", content: `Browse the ${loaderData.name} digital menu.` },
-          { property: "og:title", content: `${loaderData.name} — Digital Menu` },
-          { property: "og:description", content: `Browse the ${loaderData.name} digital menu.` },
-        ]
-      : [{ title: "Menu not found" }, { name: "robots", content: "noindex" }],
-  }),
+  head: ({ loaderData }) => {
+    const cafe = loaderData as { name: string } | undefined;
+    return {
+      meta: cafe
+        ? [
+            { title: `${cafe.name} — Digital Menu` },
+            { name: "description", content: `Browse the ${cafe.name} digital menu.` },
+            { property: "og:title", content: `${cafe.name} — Digital Menu` },
+            { property: "og:description", content: `Browse the ${cafe.name} digital menu.` },
+          ]
+        : [{ title: "Menu not found" }, { name: "robots", content: "noindex" }],
+    };
+  },
   loader: async ({ params }) => {
     const { data, error } = await supabase
       .from("cafes")
