@@ -1,16 +1,64 @@
+export type MenuItemSize = {
+  label: string;
+  price: string;
+};
+
 export type MenuItem = {
+  id?: string;
   name: string;
+  name_am?: string;
+  name_ar?: string;
   price: string;
   image?: string;
   note?: string;
+  description?: string;
+  description_am?: string;
+  description_ar?: string;
   startingFrom?: boolean;
+  isAvailable?: boolean;
+  isFeatured?: boolean;
+  sizes?: MenuItemSize[];
 };
 
 export type Category = {
+  id?: string;
   slug: string;
   name: string;
+  name_am?: string;
+  name_ar?: string;
   items: MenuItem[];
 };
+
+/** Localized display name for chrome locale. */
+export function localizedName(
+  item: { name: string; name_am?: string; name_ar?: string },
+  locale: string,
+): string {
+  if (locale === "am" && item.name_am) return item.name_am;
+  if (locale === "ar" && item.name_ar) return item.name_ar;
+  return item.name;
+}
+
+export function localizedDescription(
+  item: { description?: string; description_am?: string; description_ar?: string; note?: string },
+  locale: string,
+): string | undefined {
+  if (locale === "am" && item.description_am) return item.description_am;
+  if (locale === "ar" && item.description_ar) return item.description_ar;
+  return item.description || item.note;
+}
+
+export function displayPrice(item: MenuItem): { price: string; startingFrom: boolean } {
+  if (item.sizes && item.sizes.length > 0) {
+    const nums = item.sizes.map((s) => Number(String(s.price).replace(/,/g, ""))).filter((n) => !Number.isNaN(n));
+    const min = Math.min(...nums);
+    return {
+      price: Number.isFinite(min) ? min.toLocaleString() : item.sizes[0].price,
+      startingFrom: true,
+    };
+  }
+  return { price: item.price, startingFrom: !!item.startingFrom };
+}
 
 const CDN = "https://digitalmenu.muskplc.com/api/files/menu-items";
 

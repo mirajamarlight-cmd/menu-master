@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { BuiltByRaafat } from "@/components/brand/built-by-raafat";
 
 type CafeMembership = {
   cafe_id: string;
@@ -117,10 +118,8 @@ function Dashboard() {
         </div>
       </main>
 
-      <footer className="mx-auto max-w-6xl px-4 py-8 text-center text-xs text-muted-foreground">
-        <a href="https://raafat.site" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">
-          Built by RAAFAT-DIGITAL
-        </a>
+      <footer className="mx-auto max-w-6xl px-4 py-8 text-center">
+        <BuiltByRaafat />
       </footer>
     </div>
   );

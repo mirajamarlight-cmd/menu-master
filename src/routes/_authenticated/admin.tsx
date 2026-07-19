@@ -1,6 +1,7 @@
 import { createFileRoute, redirect, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { BuiltByRaafat } from "@/components/brand/built-by-raafat";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   ssr: false,
@@ -77,6 +78,10 @@ function AdminPage() {
 
         {error && <p className="text-sm text-destructive">{error}</p>}
       </main>
+
+      <footer className="mx-auto max-w-6xl px-4 py-8 text-center">
+        <BuiltByRaafat />
+      </footer>
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
+import { BuiltByRaafat } from "@/components/brand/built-by-raafat";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -164,12 +165,9 @@ function AuthPage() {
           </form>
         </div>
 
-        <div className="mt-6 text-center text-xs text-muted-foreground">
+        <div className="mt-6 space-y-2 text-center text-xs text-muted-foreground">
           <Link to="/" className="underline underline-offset-4">Back to menu</Link>
-          <span className="mx-2">·</span>
-          <a href="https://raafat.site" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">
-            Built by RAAFAT-DIGITAL
-          </a>
+          <BuiltByRaafat />
         </div>
       </div>
     </div>

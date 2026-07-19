@@ -1,36 +1,80 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, ExternalLink, Info, LayoutGrid, List, MapPin, MessageSquare, Moon, Phone, Search, Star, Sun, Wallet, X } from "lucide-react";
-import { categories, popular, LOGO_ANIMAL, LOGO_TEXT, type MenuItem } from "@/lib/menu-data";
+import {
+  ChevronLeft,
+  ChevronRight,
+  ExternalLink,
+  Info,
+  LayoutGrid,
+  List,
+  MapPin,
+  MessageSquare,
+  Moon,
+  Search,
+  Star,
+  Sun,
+  Wallet,
+  X,
+} from "lucide-react";
+import {
+  LOGO_ANIMAL,
+  LOGO_TEXT,
+  displayPrice,
+  localizedDescription,
+  localizedName,
+  type Category,
+  type MenuItem,
+} from "@/lib/menu-data";
+import { fetchMuskMenu } from "@/lib/menu-api";
+import { applyTheme, readStoredTheme, toggleTheme, type ThemeMode } from "@/lib/theme";
+import { LocaleProvider, useLocale } from "@/i18n/locale-context";
+import { LOCALE_LABELS, type Locale } from "@/i18n/messages";
+import { MenuLoading } from "@/components/menu/menu-loading";
+import { MenuError } from "@/components/menu/menu-error";
+import { MenuFooter } from "@/components/menu/menu-footer";
+import { PaymentAccountsSection } from "@/components/menu/payment-accounts";
+import { ReviewSection } from "@/components/menu/review-section";
+import { ComplaintDialog } from "@/components/menu/complaint-dialog";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Musk Restaurant — Digital Menu" },
-      { name: "description", content: "Browse the Musk Restaurant digital menu: breakfast, mains, drinks and more." },
-      { property: "og:title", content: "Musk Restaurant — Digital Menu" },
-      { property: "og:description", content: "Browse the Musk Restaurant digital menu." },
+      { title: "Musk Cafe and Restaurant — Digital Menu" },
+      {
+        name: "description",
+        content: "Browse the Musk Cafe and Restaurant digital menu: breakfast, mains, drinks and more.",
+      },
+      { property: "og:title", content: "Musk Cafe and Restaurant — Digital Menu" },
+      { property: "og:description", content: "Browse the Musk Cafe and Restaurant digital menu." },
     ],
   }),
-  component: MenuPage,
+  component: MenuPageRoot,
 });
+
+function MenuPageRoot() {
+  return (
+    <LocaleProvider>
+      <MenuPage />
+    </LocaleProvider>
+  );
+}
 
 function Placeholder() {
   return (
     <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-white p-4">
       <img src={LOGO_ANIMAL} alt="Musk" className="h-16 w-auto object-contain" />
-      <img src={LOGO_TEXT} alt="Musk Restaurant" className="h-6 w-auto object-contain" />
+      <img src={LOGO_TEXT} alt="Musk Cafe and Restaurant" className="h-6 w-auto object-contain" />
     </div>
   );
 }
 
-function ItemImage({ item, className }: { item: MenuItem; className?: string }) {
+function ItemImage({ item, className, alt }: { item: MenuItem; className?: string; alt: string }) {
   const [failed, setFailed] = useState(false);
   if (!item.image || failed) return <Placeholder />;
   return (
     <img
       src={item.image}
-      alt={item.name}
+      alt={alt}
       loading="lazy"
       onError={() => setFailed(true)}
       className={className ?? "h-full w-full object-cover"}
@@ -38,53 +82,66 @@ function ItemImage({ item, className }: { item: MenuItem; className?: string }) 
   );
 }
 
-function HeroCarousel() {
+function HeroCarousel({ items }: { items: MenuItem[] }) {
+  const { t, locale } = useLocale();
   const [idx, setIdx] = useState(0);
-  const count = popular.length;
+  const count = items.length;
   useEffect(() => {
-    const t = setInterval(() => setIdx((i) => (i + 1) % count), 5000);
-    return () => clearInterval(t);
+    if (count < 2) return;
+    const timer = setInterval(() => setIdx((i) => (i + 1) % count), 5000);
+    return () => clearInterval(timer);
   }, [count]);
-  const item = popular[idx];
+  if (!count) return null;
+  const item = items[idx % count];
+  const { price, startingFrom } = displayPrice(item);
+  const name = localizedName(item, locale);
+
   return (
     <div className="relative overflow-hidden rounded-3xl bg-neutral-900 text-white shadow-xl">
       <div className="relative aspect-[16/9] w-full sm:aspect-[21/9]">
-        <ItemImage item={item} className="absolute inset-0 h-full w-full object-cover" />
+        <ItemImage item={item} alt={name} className="absolute inset-0 h-full w-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
       </div>
       <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-10">
         <div className="flex items-center gap-3">
           <span className="rounded-full bg-[var(--brand-gold)] px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-neutral-900">
-            Popular Order
+            {t.featured.popular_order}
           </span>
           <span className="text-xs text-white/70">
             {String(idx + 1).padStart(2, "0")} / {String(count).padStart(2, "0")}
           </span>
         </div>
-        <h2 className="mt-4 text-3xl font-bold sm:text-5xl">{item.name}</h2>
+        <h2 className="mt-4 text-3xl font-bold sm:text-5xl">{name}</h2>
         <div className="mt-4 inline-flex flex-col rounded-2xl bg-white/10 px-5 py-3 backdrop-blur">
-          <span className="text-[10px] uppercase tracking-widest text-white/70">Price</span>
+          <span className="text-[10px] uppercase tracking-widest text-white/70">{t.featured.price}</span>
           <span className="text-xl font-bold">
-            {item.price} <span className="text-sm font-semibold text-[var(--brand-gold)]">ETB</span>
+            {startingFrom && <span className="me-1 text-xs font-normal text-white/70">{t.featured.from} </span>}
+            {price} <span className="text-sm font-semibold text-[var(--brand-gold)]">{t.common.etb}</span>
           </span>
         </div>
       </div>
-      <button
-        aria-label="Prev"
-        onClick={() => setIdx((i) => (i - 1 + count) % count)}
-        className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-white/20 p-2 backdrop-blur hover:bg-white/30"
-      >
-        <ChevronLeft className="h-5 w-5" />
-      </button>
-      <button
-        aria-label="Next"
-        onClick={() => setIdx((i) => (i + 1) % count)}
-        className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-white/20 p-2 backdrop-blur hover:bg-white/30"
-      >
-        <ChevronRight className="h-5 w-5" />
-      </button>
+      {count > 1 && (
+        <>
+          <button
+            type="button"
+            aria-label="Prev"
+            onClick={() => setIdx((i) => (i - 1 + count) % count)}
+            className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-white/20 p-2 backdrop-blur hover:bg-white/30"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <button
+            type="button"
+            aria-label="Next"
+            onClick={() => setIdx((i) => (i + 1) % count)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-white/20 p-2 backdrop-blur hover:bg-white/30"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+        </>
+      )}
       <div className="absolute bottom-3 right-6 flex gap-1.5">
-        {popular.map((_, i) => (
+        {items.map((_, i) => (
           <span
             key={i}
             className={`h-1 rounded-full transition-all ${i === idx ? "w-8 bg-[var(--brand-gold)]" : "w-4 bg-white/40"}`}
@@ -95,51 +152,76 @@ function HeroCarousel() {
   );
 }
 
-function ItemCard({ item, view, onOpen }: { item: MenuItem; view: "grid" | "list"; onOpen: (i: MenuItem) => void }) {
+function ItemCard({
+  item,
+  view,
+  onOpen,
+}: {
+  item: MenuItem;
+  view: "grid" | "list";
+  onOpen: (i: MenuItem) => void;
+}) {
+  const { t, locale } = useLocale();
+  const name = localizedName(item, locale);
+  const note = localizedDescription(item, locale);
+  const { price, startingFrom } = displayPrice(item);
+  const unavailable = item.isAvailable === false;
+
   if (view === "list") {
     return (
       <div
         onClick={() => onOpen(item)}
-        className="flex cursor-pointer items-center gap-4 rounded-2xl border border-border bg-card p-3 shadow-sm transition hover:shadow-md"
+        className={`flex cursor-pointer items-center gap-4 rounded-2xl border border-border bg-card p-3 shadow-sm transition hover:shadow-md ${
+          unavailable ? "opacity-60" : ""
+        }`}
       >
         <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-muted">
-          <ItemImage item={item} />
+          <ItemImage item={item} alt={name} />
         </div>
         <div className="min-w-0 flex-1">
-          <h3 className="truncate font-semibold text-foreground">{item.name}</h3>
-          {item.note && <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{item.note}</p>}
+          <h3 className="truncate font-semibold text-foreground">{name}</h3>
+          {unavailable && <p className="text-xs font-medium text-destructive">{t.menu.out_of_stock}</p>}
+          {note && <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{note}</p>}
           <div className="mt-1 text-sm">
-            {item.startingFrom && <span className="text-xs text-muted-foreground">Starting from </span>}
-            <span className="font-bold">{item.price}</span>
-            <span className="ml-1 text-xs font-semibold text-[var(--brand-gold)]">ETB</span>
+            {startingFrom && <span className="text-xs text-muted-foreground">{t.menu.starting_from} </span>}
+            <span className="font-bold">{price}</span>
+            <span className="ms-1 text-xs font-semibold text-[var(--brand-gold)]">{t.common.etb}</span>
           </div>
         </div>
-        <button className="rounded-full p-2 text-muted-foreground hover:bg-muted" aria-label="Info">
+        <button type="button" className="rounded-full p-2 text-muted-foreground hover:bg-muted" aria-label="Info">
           <Info className="h-4 w-4" />
         </button>
       </div>
     );
   }
+
   return (
     <div
       onClick={() => onOpen(item)}
-      className="group flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition hover:shadow-md"
+      className={`group flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition hover:shadow-md ${
+        unavailable ? "opacity-60" : ""
+      }`}
     >
       <div className="aspect-square w-full overflow-hidden bg-muted">
-        <ItemImage item={item} className="h-full w-full object-cover transition group-hover:scale-105" />
+        <ItemImage
+          item={item}
+          alt={name}
+          className="h-full w-full object-cover transition group-hover:scale-105"
+        />
       </div>
       <div className="flex flex-1 flex-col gap-2 p-4">
-        <h3 className="font-semibold leading-tight text-foreground">{item.name}</h3>
-        {item.note && <p className="line-clamp-2 text-xs text-muted-foreground">{item.note}</p>}
+        <h3 className="font-semibold leading-tight text-foreground">{name}</h3>
+        {unavailable && <p className="text-xs font-medium text-destructive">{t.menu.out_of_stock}</p>}
+        {note && <p className="line-clamp-2 text-xs text-muted-foreground">{note}</p>}
         <div className="mt-auto flex items-end justify-between pt-2">
           <div>
-            {item.startingFrom && <div className="text-[10px] text-muted-foreground">Starting from</div>}
+            {startingFrom && <div className="text-[10px] text-muted-foreground">{t.menu.starting_from}</div>}
             <div>
-              <span className="text-lg font-bold">{item.price}</span>
-              <span className="ml-1 text-xs font-semibold text-[var(--brand-gold)]">ETB</span>
+              <span className="text-lg font-bold">{price}</span>
+              <span className="ms-1 text-xs font-semibold text-[var(--brand-gold)]">{t.common.etb}</span>
             </div>
           </div>
-          <button className="rounded-full p-1.5 text-muted-foreground hover:bg-muted" aria-label="Info">
+          <button type="button" className="rounded-full p-1.5 text-muted-foreground hover:bg-muted" aria-label="Info">
             <Info className="h-4 w-4" />
           </button>
         </div>
@@ -149,6 +231,13 @@ function ItemCard({ item, view, onOpen }: { item: MenuItem; view: "grid" | "list
 }
 
 function ItemModal({ item, onClose }: { item: MenuItem | null; onClose: () => void }) {
+  const { t, locale } = useLocale();
+  const [sizeIdx, setSizeIdx] = useState(0);
+
+  useEffect(() => {
+    setSizeIdx(0);
+  }, [item]);
+
   useEffect(() => {
     if (!item) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -159,7 +248,15 @@ function ItemModal({ item, onClose }: { item: MenuItem | null; onClose: () => vo
       document.body.style.overflow = "";
     };
   }, [item, onClose]);
+
   if (!item) return null;
+  const name = localizedName(item, locale);
+  const note = localizedDescription(item, locale);
+  const unavailable = item.isAvailable === false;
+  const sizes = item.sizes ?? [];
+  const price = sizes.length ? sizes[sizeIdx]?.price ?? item.price : displayPrice(item).price;
+  const startingFrom = !sizes.length && displayPrice(item).startingFrom;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={onClose}>
       <div
@@ -167,24 +264,49 @@ function ItemModal({ item, onClose }: { item: MenuItem | null; onClose: () => vo
         className="relative w-full max-w-lg overflow-hidden rounded-3xl bg-card shadow-2xl"
       >
         <div className="aspect-video w-full bg-muted">
-          <ItemImage item={item} className="h-full w-full object-cover" />
+          <ItemImage item={item} alt={name} className="h-full w-full object-cover" />
         </div>
         <button
+          type="button"
           onClick={onClose}
-          className="absolute right-3 top-3 rounded-full bg-black/50 p-2 text-white hover:bg-black/70"
+          className="absolute end-3 top-3 rounded-full bg-black/50 p-2 text-white hover:bg-black/70"
           aria-label="Close"
         >
           <X className="h-4 w-4" />
         </button>
         <div className="p-6">
-          <h3 className="text-2xl font-bold">{item.name}</h3>
-          {item.note && <p className="mt-2 text-sm text-muted-foreground">{item.note}</p>}
+          <h3 className="text-2xl font-bold">{name}</h3>
+          {unavailable && <p className="mt-2 text-sm font-medium text-destructive">{t.menu.out_of_stock}</p>}
+          {note && <p className="mt-2 text-sm text-muted-foreground">{note}</p>}
+          {sizes.length > 0 && (
+            <div className="mt-4">
+              <div className="text-sm font-medium">{t.menu.sizes}</div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {sizes.map((s, i) => (
+                  <button
+                    key={s.label}
+                    type="button"
+                    onClick={() => setSizeIdx(i)}
+                    className={`rounded-full border px-3 py-1.5 text-sm ${
+                      sizeIdx === i
+                        ? "border-transparent bg-[var(--brand-gold)] text-neutral-900"
+                        : "border-border hover:bg-muted"
+                    }`}
+                  >
+                    {s.label} · {s.price} {t.common.etb}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="mt-4 inline-flex flex-col rounded-2xl bg-muted px-5 py-3">
-            <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Price</span>
+            <span className="text-[10px] uppercase tracking-widest text-muted-foreground">{t.featured.price}</span>
             <span className="text-xl font-bold">
-              {item.startingFrom && <span className="mr-1 text-xs font-normal text-muted-foreground">Starting from</span>}
-              {item.price}
-              <span className="ml-1 text-sm font-semibold text-[var(--brand-gold)]">ETB</span>
+              {startingFrom && (
+                <span className="me-1 text-xs font-normal text-muted-foreground">{t.menu.starting_from}</span>
+              )}
+              {price}
+              <span className="ms-1 text-sm font-semibold text-[var(--brand-gold)]">{t.common.etb}</span>
             </span>
           </div>
         </div>
@@ -193,18 +315,97 @@ function ItemModal({ item, onClose }: { item: MenuItem | null; onClose: () => vo
   );
 }
 
+function CategoryChip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium transition ${
+        active
+          ? "border-transparent bg-[var(--brand-gold)] text-neutral-900"
+          : "border-border bg-card text-foreground hover:bg-muted"
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
+
+function LanguageSwitcher() {
+  const { locale, setLocale } = useLocale();
+  const [open, setOpen] = useState(false);
+  const locales: Locale[] = ["en", "am", "ar"];
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="rounded-full border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted"
+      >
+        {LOCALE_LABELS[locale]}
+      </button>
+      {open && (
+        <div className="absolute end-0 z-50 mt-2 min-w-[4.5rem] overflow-hidden rounded-xl border border-border bg-card shadow-lg">
+          {locales.map((l) => (
+            <button
+              key={l}
+              type="button"
+              onClick={() => {
+                setLocale(l);
+                setOpen(false);
+              }}
+              className={`block w-full px-3 py-2 text-start text-sm hover:bg-muted ${
+                locale === l ? "font-semibold text-[var(--brand-gold)]" : ""
+              }`}
+            >
+              {LOCALE_LABELS[l]}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function MenuPage() {
+  const { t, locale } = useLocale();
   const [query, setQuery] = useState("");
   const [active, setActive] = useState<string>("all");
   const [view, setView] = useState<"grid" | "list">("grid");
   const [openItem, setOpenItem] = useState<MenuItem | null>(null);
-  const [dark, setDark] = useState(false);
+  const [dark, setDark] = useState<ThemeMode>("light");
+  const [complaintOpen, setComplaintOpen] = useState(false);
+  const [ready, setReady] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [featured, setFeatured] = useState<MenuItem[]>([]);
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
+  const bootRef = useRef(false);
+
+  const loadMenu = async () => {
+    setLoadError(false);
+    setReady(false);
+    const minDelay = new Promise((r) => setTimeout(r, 500));
+    try {
+      const [payload] = await Promise.all([fetchMuskMenu(), minDelay]);
+      setCategories(payload.categories);
+      setFeatured(payload.featured);
+      setReady(true);
+    } catch {
+      setLoadError(true);
+      setReady(true);
+    }
+  };
 
   useEffect(() => {
-    document.documentElement.classList.toggle("dark", dark);
-  }, [dark]);
+    if (bootRef.current) return;
+    bootRef.current = true;
+    const theme = readStoredTheme();
+    setDark(theme);
+    applyTheme(theme);
+    void loadMenu();
+  }, []);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -212,10 +413,15 @@ function MenuPage() {
       .filter((c) => active === "all" || c.slug === active)
       .map((c) => ({
         ...c,
-        items: q ? c.items.filter((i) => i.name.toLowerCase().includes(q)) : c.items,
+        items: q
+          ? c.items.filter((i) => {
+              const hay = `${i.name} ${i.name_am ?? ""} ${i.name_ar ?? ""} ${i.note ?? ""} ${i.description ?? ""}`.toLowerCase();
+              return hay.includes(q);
+            })
+          : c.items,
       }))
       .filter((c) => c.items.length > 0);
-  }, [query, active]);
+  }, [query, active, categories]);
 
   const scrollTo = (slug: string) => {
     setActive(slug);
@@ -232,69 +438,84 @@ function MenuPage() {
     }, 50);
   };
 
+  if (!ready) return <MenuLoading />;
+  if (loadError) return <MenuError onRetry={() => void loadMenu()} />;
+
   return (
     <div className="min-h-screen bg-background">
-      {/* Top strip */}
-      <div className="bg-neutral-100 py-2 text-center text-xs text-neutral-600">
-        All prices include VAT &amp; Service Charge
+      <div className="bg-neutral-100 py-2 text-center text-xs text-neutral-600 dark:bg-neutral-900 dark:text-neutral-300">
+        {t.navbar.vat_notice}
       </div>
 
-      {/* Header */}
       <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3">
-          <a href="#" className="flex items-center gap-2">
+          <a href="/" className="flex items-center gap-2">
             <img src={LOGO_ANIMAL} alt="" className="h-9 w-auto" />
-            <img src={LOGO_TEXT} alt="Musk Restaurant" className="hidden h-6 w-auto sm:block" />
+            <img src={LOGO_TEXT} alt="Musk Cafe and Restaurant" className="hidden h-6 w-auto sm:block" />
           </a>
           <nav className="hidden items-center gap-6 text-sm font-medium text-foreground md:flex">
-            <a className="flex items-center gap-1.5 hover:text-[var(--brand-gold)]" href="#payment">
-              <Wallet className="h-4 w-4" /> Payment Options
+            <a className="flex items-center gap-1.5 hover:text-[var(--brand-gold)]" href="#bank-accounts-section">
+              <Wallet className="h-4 w-4" /> {t.navbar.payment_options}
             </a>
-            <a className="flex items-center gap-1.5 hover:text-[var(--brand-gold)]" href="#review">
-              <Star className="h-4 w-4" /> Review
+            <a className="flex items-center gap-1.5 hover:text-[var(--brand-gold)]" href="#review-section">
+              <Star className="h-4 w-4" /> {t.navbar.review}
             </a>
-            <a className="flex items-center gap-1.5 hover:text-[var(--brand-gold)]" href="#contact">
-              <MapPin className="h-4 w-4" /> Contact
+            <a className="flex items-center gap-1.5 hover:text-[var(--brand-gold)]" href="#footer">
+              <MapPin className="h-4 w-4" /> {t.navbar.contact}
             </a>
           </nav>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setDark((d) => !d)}
+              type="button"
+              onClick={() => setDark(toggleTheme(dark))}
               aria-label="Toggle dark mode"
               className="rounded-full border border-border p-2 hover:bg-muted"
             >
-              {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              {dark === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </button>
-            <button className="hidden rounded-full border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted sm:inline-flex">
-              EN
-            </button>
-            <button className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted">
-              <MessageSquare className="h-4 w-4" /> Complaint
+            <LanguageSwitcher />
+            <button
+              type="button"
+              onClick={() => setComplaintOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted"
+            >
+              <MessageSquare className="h-4 w-4" />
+              <span className="hidden sm:inline">{t.navbar.complaint}</span>
             </button>
             <a
-              href="https://muskplc.com"
+              href="https://raafat.site"
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
               className="hidden items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted lg:inline-flex"
+              title={t.navbar.dev_credit_sub}
             >
-              Contact Developer <ExternalLink className="h-3.5 w-3.5" />
+              {t.navbar.dev_credit} <ExternalLink className="h-3.5 w-3.5" />
             </a>
           </div>
         </div>
 
-        {/* Search + view toggle */}
         <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 pb-3">
           <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="absolute start-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search for dishes, drinks..."
-              className="w-full rounded-full border border-border bg-card py-2.5 pl-10 pr-4 text-sm outline-none ring-[var(--brand-gold)] focus:ring-2"
+              placeholder={t.menu.search_placeholder}
+              className="w-full rounded-full border border-border bg-card py-2.5 pe-10 ps-10 text-sm outline-none ring-[var(--brand-gold)] focus:ring-2"
             />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                className="absolute end-3 top-1/2 -translate-y-1/2 text-xs font-medium text-[var(--brand-gold)] hover:underline"
+              >
+                {t.menu.clear_search}
+              </button>
+            )}
           </div>
           <div className="flex items-center gap-1 rounded-full border border-border bg-card p-1">
             <button
+              type="button"
               onClick={() => setView("list")}
               aria-label="List view"
               className={`rounded-full p-1.5 ${view === "list" ? "bg-muted" : ""}`}
@@ -302,6 +523,7 @@ function MenuPage() {
               <List className="h-4 w-4" />
             </button>
             <button
+              type="button"
               onClick={() => setView("grid")}
               aria-label="Grid view"
               className={`rounded-full p-1.5 ${view === "grid" ? "bg-muted" : ""}`}
@@ -311,14 +533,17 @@ function MenuPage() {
           </div>
         </div>
 
-        {/* Category chips */}
-        <div className="mx-auto max-w-7xl overflow-x-auto px-4 pb-3">
+        <div className="sticky top-0 z-30 mx-auto max-w-7xl overflow-x-auto px-4 pb-3">
           <div className="flex gap-2">
-            <CategoryChip label="All" active={active === "all"} onClick={() => scrollTo("all")} />
+            <CategoryChip
+              label={t.menu.all_categories}
+              active={active === "all"}
+              onClick={() => scrollTo("all")}
+            />
             {categories.map((c) => (
               <CategoryChip
                 key={c.slug}
-                label={c.name}
+                label={localizedName(c, locale)}
                 active={active === c.slug}
                 onClick={() => scrollTo(c.slug)}
               />
@@ -330,7 +555,7 @@ function MenuPage() {
       <main className="mx-auto max-w-7xl px-4 py-6">
         {active === "all" && query.trim() === "" && (
           <div className="mb-8">
-            <HeroCarousel />
+            <HeroCarousel items={featured} />
           </div>
         )}
 
@@ -344,7 +569,7 @@ function MenuPage() {
               }}
               className="scroll-mt-48"
             >
-              <h2 className="mb-4 text-2xl font-bold tracking-tight">{c.name}</h2>
+              <h2 className="mb-4 text-2xl font-bold tracking-tight">{localizedName(c, locale)}</h2>
               <div
                 className={
                   view === "grid"
@@ -353,189 +578,39 @@ function MenuPage() {
                 }
               >
                 {c.items.map((item, i) => (
-                  <ItemCard key={c.slug + i} item={item} view={view} onOpen={setOpenItem} />
+                  <ItemCard key={(item.id ?? c.slug) + i} item={item} view={view} onOpen={setOpenItem} />
                 ))}
               </div>
             </section>
           ))}
 
           {filtered.length === 0 && (
-            <div className="py-24 text-center text-muted-foreground">No items match your search.</div>
+            <div className="py-24 text-center">
+              <h3 className="text-xl font-semibold text-foreground">{t.menu_page.no_results_title}</h3>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {t.menu_page.no_results_desc} {query ? `“${query}”` : ""}
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">{t.menu_page.adjust_filters}</p>
+              {query && (
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  className="mt-4 rounded-full border border-border px-4 py-2 text-sm font-medium hover:bg-muted"
+                >
+                  {t.menu.clear_search}
+                </button>
+              )}
+            </div>
           )}
         </div>
 
-        {/* Payment */}
-        <section id="payment" className="mt-20 rounded-3xl border border-border bg-card p-6 sm:p-10">
-          <h2 className="text-2xl font-bold">Payment Transfer Accounts</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Transfer your payment to any of the accounts below</p>
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <BankCard bank="Commercial Bank of Ethiopia (CBE)" holder="Musk Restaurant PLC" number="1000727868686" />
-            <BankCard bank="Dashen Bank" holder="Musk Restaurant PLC" number="7912292094211" />
-            <BankCard bank="Telebirr" holder="Musk" number="0967777778" />
-          </div>
-        </section>
-
-        {/* Review */}
+        <PaymentAccountsSection />
         <ReviewSection />
-
-        <footer id="contact" className="mt-16 pb-10 pt-8 text-center text-sm text-muted-foreground">
-          <img src={LOGO_TEXT} alt="Musk Restaurant" className="mx-auto h-8" />
-          <div className="mt-4 flex items-center justify-center gap-4 text-sm">
-            <a href="tel:+251967777778" className="inline-flex items-center gap-1.5 hover:text-[var(--brand-gold)]">
-              <Phone className="h-4 w-4" /> +251 96 777 7778
-            </a>
-            <a href="https://maps.google.com" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:text-[var(--brand-gold)]">
-              <MapPin className="h-4 w-4" /> Addis Ababa
-            </a>
-          </div>
-          <p className="mt-3">© {new Date().getFullYear()} Musk Restaurant</p>
-        </footer>
+        <MenuFooter />
       </main>
 
       <ItemModal item={openItem} onClose={() => setOpenItem(null)} />
+      <ComplaintDialog open={complaintOpen} onClose={() => setComplaintOpen(false)} />
     </div>
-  );
-}
-
-function CategoryChip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium transition ${
-        active
-          ? "border-transparent bg-[var(--brand-gold)] text-neutral-900"
-          : "border-border bg-card text-foreground hover:bg-muted"
-      }`}
-    >
-      {label}
-    </button>
-  );
-}
-
-function BankCard({ bank, holder, number }: { bank: string; holder: string; number: string }) {
-  const [copied, setCopied] = useState(false);
-  return (
-    <div className="rounded-2xl border border-border bg-background p-5">
-      <div className="text-base font-semibold">{bank}</div>
-      <div className="mt-1 text-xs text-muted-foreground">Savings · ETB</div>
-      <div className="mt-3 text-xs text-muted-foreground">Account Name: {holder}</div>
-      <div className="mt-2 flex items-center justify-between gap-2 rounded-xl bg-muted px-3 py-2">
-        <span className="font-mono text-sm">{number}</span>
-        <button
-          onClick={() => {
-            navigator.clipboard?.writeText(number);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 1500);
-          }}
-          className="text-xs font-semibold text-[var(--brand-gold)] hover:underline"
-        >
-          {copied ? "Copied" : "Copy"}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function ReviewSection() {
-  const [ratings, setRatings] = useState<Record<string, number>>({});
-  const [text, setText] = useState("");
-  const [priority, setPriority] = useState<"low" | "med" | "high">("low");
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [submitted, setSubmitted] = useState(false);
-  const cats = ["Place & Ambiance", "Food & Drinks", "Customer Service"];
-  const complete = cats.every((c) => ratings[c] > 0);
-
-  if (submitted) {
-    return (
-      <section id="review" className="mt-12 rounded-3xl border border-border bg-card p-6 text-center sm:p-10">
-        <h2 className="text-2xl font-bold">Thank you!</h2>
-        <p className="mt-2 text-sm text-muted-foreground">Your feedback has been recorded.</p>
-      </section>
-    );
-  }
-
-  return (
-    <section id="review" className="mt-12 rounded-3xl border border-border bg-card p-6 sm:p-10">
-      <h2 className="text-2xl font-bold">Share Your Experience</h2>
-      <p className="mt-1 text-sm text-muted-foreground">Your honest feedback helps us serve you better every visit.</p>
-      <div className="mt-6 grid gap-6 sm:grid-cols-3">
-        {cats.map((label) => (
-          <div key={label}>
-            <div className="text-sm font-medium">{label}</div>
-            <div className="mt-2 flex gap-1">
-              {[1, 2, 3, 4, 5].map((n) => (
-                <button key={n} onClick={() => setRatings((r) => ({ ...r, [label]: n }))} aria-label={`${n} star`}>
-                  <Star
-                    className={`h-7 w-7 transition ${
-                      (ratings[label] ?? 0) >= n
-                        ? "fill-[var(--brand-gold)] text-[var(--brand-gold)]"
-                        : "text-neutral-300"
-                    }`}
-                  />
-                </button>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-      <div className="mt-6">
-        <textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Tell us more (optional)"
-          maxLength={2000}
-          rows={4}
-          className="w-full rounded-2xl border border-border bg-background p-3 text-sm outline-none focus:ring-2 focus:ring-[var(--brand-gold)]"
-        />
-        <div className="mt-1 text-right text-xs text-muted-foreground">{text.length} / 2000</div>
-      </div>
-      <div className="mt-4">
-        <div className="text-sm font-medium">How important is this feedback?</div>
-        <div className="mt-2 flex flex-wrap gap-2">
-          {[
-            { k: "low", label: "Just sharing" },
-            { k: "med", label: "Needs attention" },
-            { k: "high", label: "Urgent" },
-          ].map((p) => (
-            <button
-              key={p.k}
-              onClick={() => setPriority(p.k as typeof priority)}
-              className={`rounded-full border px-4 py-1.5 text-sm font-medium transition ${
-                priority === p.k
-                  ? "border-transparent bg-[var(--brand-gold)] text-neutral-900"
-                  : "border-border bg-card hover:bg-muted"
-              }`}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div className="mt-6 grid gap-3 sm:grid-cols-2">
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Your name (optional)"
-          className="rounded-2xl border border-border bg-background p-3 text-sm outline-none focus:ring-2 focus:ring-[var(--brand-gold)]"
-        />
-        <input
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          placeholder="Phone (optional)"
-          className="rounded-2xl border border-border bg-background p-3 text-sm outline-none focus:ring-2 focus:ring-[var(--brand-gold)]"
-        />
-      </div>
-      <button
-        disabled={!complete}
-        onClick={() => setSubmitted(true)}
-        className="mt-4 rounded-full bg-[var(--brand-gold)] px-6 py-2.5 text-sm font-bold text-neutral-900 hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        Submit Review
-      </button>
-      {!complete && (
-        <p className="mt-2 text-xs text-muted-foreground">Please rate all three categories to submit</p>
-      )}
-    </section>
   );
 }
