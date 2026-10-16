@@ -12,4 +12,6 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  // Coolify / self-host: Node listener (not Cloudflare Workers).
+  nitro: { preset: "node-server" },
 });
